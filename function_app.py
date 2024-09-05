@@ -1,27 +1,54 @@
 import azure.functions as func
+from azure.storage.blob import BlobServiceClient
 import datetime
 import json
 import logging
+from PIL import Image
+from io import BytesIO
+import os
+
+
+CONTAINER_NAME = 'image-files'
+
+# Compress Image Function
+def compress_image(image_bytes):
+    """Compress the uploaded image."""
+    image = Image.open(BytesIO(image_bytes))
+    output_io = BytesIO()
+    image.save(output_io, format='JPEG', quality=85)  # Compress image to 85% quality
+    output_io.seek(0)
+    return output_io
 
 app = func.FunctionApp()
 
-@app.route(route="image_upload", auth_level=func.AuthLevel.ANONYMOUS)
-def image_upload(req: func.HttpRequest) -> func.HttpResponse:
-    logging.info('Python HTTP trigger function processed a request.')
 
-    name = req.params.get('name')
-    if not name:
-        try:
-            req_body = req.get_json()
-        except ValueError:
-            pass
-        else:
-            name = req_body.get('name')
+# Azure Function v2.0 with HTTP trigger and Blob output binding
+@app.function_name(name="upload_compress_image")
+@app.route(route="upload-image", auth_level=func.AuthLevel.ANONYMOUS)  # HTTP Trigger
+# @app.blob_output(arg_name="output_blob", path=f"{CONTAINER_NAME}/compressed_{blob_name}", connection="AzureWebJobsStorage")
+def upload_image(req: func.HttpRequest, output_blob: func.Out[func.InputStream]) -> func.HttpResponse:
+    try:
+        # Get uploaded image
+        image_data = req.files['file'].read()
+        
+        # Compress the image
+        compressed_image = compress_image(image_data)
 
-    if name:
-        return func.HttpResponse(f"Hello, {name}. This HTTP triggered function executed successfully.")
-    else:
-        return func.HttpResponse(
-             "This HTTP triggered function executed successfully. Pass a name in the query string or in the request body for a personalized response.",
-             status_code=200
-        )
+        # Generate dynamic blob name
+        blob_name = f"compressed_{req.files['file'].filename}"
+        
+        # Upload compressed image to Blob Storage
+        # output_blob.set(compressed_image)
+
+        # Upload compressed image to Blob Storage
+        blob_service_client = BlobServiceClient.from_connection_string(CONNECTION_STRING)
+        blob_client = blob_service_client.get_blob_client(container=CONTAINER_NAME, blob=blob_name)
+        blob_client.upload_blob(compressed_image, overwrite=True)
+
+        logging.info('Compressed image uploaded to blob storage successfully')
+        return func.HttpResponse(f"Image '{req.files['file'].filename}' compressed and uploaded successfully.", status_code=200)
+    except Exception as e:
+        logging.error(f"Error processing image: {e}")
+        return func.HttpResponse("Failed to process image.", status_code=500)
+
+
