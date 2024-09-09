@@ -14,7 +14,12 @@ CONTAINER_NAME = 'image-files'
 # Compress Image Function
 def compress_image(image_bytes):
     """Compress the uploaded image."""
-    image = Image.open(BytesIO(image_bytes))
+    try:
+        image = Image.open(BytesIO(image_bytes))
+    except Exception as e:
+        logging.error(f"Error opening image: {e}")
+        raise ValueError("Cannot open image file")
+    
     output_io = BytesIO()
     image.save(output_io, format='JPEG', quality=85)  # Compress image to 85% quality
     output_io.seek(0)
@@ -24,7 +29,6 @@ app = func.FunctionApp(http_auth_level=func.AuthLevel.ANONYMOUS)
 
 
 # Azure Function v2.0 with HTTP trigger and Blob output binding
-@app.function_name(name="upload_compress_image")
 @app.route(route="upload-image")  # HTTP Trigger
 # @app.blob_output(arg_name="output_blob", path=f"{CONTAINER_NAME}/compressed_{blob_name}", connection="AzureWebJobsStorage")
 def upload_image(req: func.HttpRequest) -> func.HttpResponse:
@@ -36,7 +40,7 @@ def upload_image(req: func.HttpRequest) -> func.HttpResponse:
         compressed_image = compress_image(image_data)
 
         # Generate dynamic blob name
-        blob_name = f"compressed_{req.files['file'].filename}"
+        blob_name = f"{req.files['file'].filename}"
         
         # Upload compressed image to Blob Storage
         # output_blob.set(compressed_image)
