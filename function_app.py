@@ -1,14 +1,16 @@
 import azure.functions as func
 from azure.storage.blob import BlobServiceClient
-import datetime
-import json
+from azure.identity import DefaultAzureCredential
 import logging
 from PIL import Image
 from io import BytesIO
-import os
+
 
 # Retrieve the connection string from environment variables
-CONNECTION_STRING = os.getenv('AzureWebJobsStorage')
+# CONNECTION_STRING = os.getenv('AzureWebJobsStorage')
+# Use Managed Identity for authentication
+credential = DefaultAzureCredential()
+
 CONTAINER_NAME = 'image-files'
 
 # Compress Image Function
@@ -45,8 +47,12 @@ def upload_image(req: func.HttpRequest) -> func.HttpResponse:
         # Upload compressed image to Blob Storage
         # output_blob.set(compressed_image)
 
-        # Upload compressed image to Blob Storage
-        blob_service_client = BlobServiceClient.from_connection_string(CONNECTION_STRING)
+        # Upload compressed image to Blob Storage using connection string
+        # blob_service_client = BlobServiceClient.from_connection_string(CONNECTION_STRING)
+
+        # Initialize BlobServiceClient with Managed Identity
+        blob_service_client = BlobServiceClient(account_url=f"https://imagestore11.blob.core.windows.net", credential=credential)
+
         blob_client = blob_service_client.get_blob_client(container=CONTAINER_NAME, blob=blob_name)
         blob_client.upload_blob(compressed_image, overwrite=True)
 
@@ -63,8 +69,12 @@ def upload_image(req: func.HttpRequest) -> func.HttpResponse:
 def get_image(req: func.HttpRequest) -> func.HttpResponse:
     try:
         image_name = req.route_params.get('image')
-        # Initialize BlobServiceClient
-        blob_service_client = BlobServiceClient.from_connection_string(CONNECTION_STRING)
+        # Initialize BlobServiceClient using connection string
+        # blob_service_client = BlobServiceClient.from_connection_string(CONNECTION_STRING)
+
+        # Initialize BlobServiceClient with Managed Identity
+        blob_service_client = BlobServiceClient(account_url=f"https://<your-storage-account-name>.blob.core.windows.net", credential=credential)
+
         blob_client = blob_service_client.get_blob_client(container=CONTAINER_NAME, blob=image_name)
         
         # Download blob content
