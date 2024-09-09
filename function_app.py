@@ -7,7 +7,8 @@ from PIL import Image
 from io import BytesIO
 import os
 
-
+# Retrieve the connection string from environment variables
+CONNECTION_STRING = os.getenv('AzureWebJobsStorage')
 CONTAINER_NAME = 'image-files'
 
 # Compress Image Function
@@ -19,14 +20,14 @@ def compress_image(image_bytes):
     output_io.seek(0)
     return output_io
 
-app = func.FunctionApp()
+app = func.FunctionApp(http_auth_level=func.AuthLevel.ANONYMOUS)
 
 
 # Azure Function v2.0 with HTTP trigger and Blob output binding
 @app.function_name(name="upload_compress_image")
-@app.route(route="upload-image", auth_level=func.AuthLevel.ANONYMOUS)  # HTTP Trigger
+@app.route(route="upload-image")  # HTTP Trigger
 # @app.blob_output(arg_name="output_blob", path=f"{CONTAINER_NAME}/compressed_{blob_name}", connection="AzureWebJobsStorage")
-def upload_image(req: func.HttpRequest, output_blob: func.Out[func.InputStream]) -> func.HttpResponse:
+def upload_image(req: func.HttpRequest) -> func.HttpResponse:
     try:
         # Get uploaded image
         image_data = req.files['file'].read()
@@ -52,3 +53,23 @@ def upload_image(req: func.HttpRequest, output_blob: func.Out[func.InputStream])
         return func.HttpResponse("Failed to process image.", status_code=500)
 
 
+# Function to fetch image from blob storage and return it to the user
+@app.function_name(name="fetch_image")
+@app.route(route="get-image/{image}", methods=[func.HttpMethod.GET])  # HTTP Trigger
+def get_image(req: func.HttpRequest) -> func.HttpResponse:
+    try:
+        image_name = req.route_params.get('image')
+        # Initialize BlobServiceClient
+        blob_service_client = BlobServiceClient.from_connection_string(CONNECTION_STRING)
+        blob_client = blob_service_client.get_blob_client(container=CONTAINER_NAME, blob=image_name)
+        
+        # Download blob content
+        download_stream = blob_client.download_blob()
+        image_bytes = download_stream.readall()
+
+        # Return the image as an HTTP response
+        return func.HttpResponse(body=image_bytes, mimetype="image/jpeg", status_code=200)
+    
+    except Exception as e:
+        logging.error(f"Error fetching image '{image_name}': {e}")
+        return func.HttpResponse(f"Failed to fetch image '{image_name}'.", status_code=404)
