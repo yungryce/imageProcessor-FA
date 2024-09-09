@@ -33,10 +33,10 @@ jobs:
           source venv/bin/activate
           pip install -r requirements.txt
 
-    #   - name: Azure Login
-    #     uses: azure/login@v1
-    #     with:
-    #       creds: ${{ secrets.AZURE_CREDENTIALS }}
+      - name: Azure Login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
 
       - name: Cache Azure Functions Core Tools
         uses: actions/cache@v3
