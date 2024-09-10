@@ -51,7 +51,7 @@ def upload_image(req: func.HttpRequest) -> func.HttpResponse:
         # blob_service_client = BlobServiceClient.from_connection_string(CONNECTION_STRING)
 
         # Initialize BlobServiceClient with Managed Identity
-        blob_service_client = BlobServiceClient(account_url=f"https://imagestore11.blob.core.windows.net", credential=credential)
+        blob_service_client = BlobServiceClient(account_url=f"https://imageappbcd4.blob.core.windows.net", credential=credential)
 
         blob_client = blob_service_client.get_blob_client(container=CONTAINER_NAME, blob=blob_name)
         blob_client.upload_blob(compressed_image, overwrite=True)
@@ -64,7 +64,6 @@ def upload_image(req: func.HttpRequest) -> func.HttpResponse:
 
 
 # Function to fetch image from blob storage and return it to the user
-@app.function_name(name="fetch_image")
 @app.route(route="get-image/{image}", methods=[func.HttpMethod.GET])  # HTTP Trigger
 def get_image(req: func.HttpRequest) -> func.HttpResponse:
     try:
@@ -73,7 +72,7 @@ def get_image(req: func.HttpRequest) -> func.HttpResponse:
         # blob_service_client = BlobServiceClient.from_connection_string(CONNECTION_STRING)
 
         # Initialize BlobServiceClient with Managed Identity
-        blob_service_client = BlobServiceClient(account_url=f"https://<your-storage-account-name>.blob.core.windows.net", credential=credential)
+        blob_service_client = BlobServiceClient(account_url=f"https://imageappbcd4.blob.core.windows.net", credential=credential)
 
         blob_client = blob_service_client.get_blob_client(container=CONTAINER_NAME, blob=image_name)
         
