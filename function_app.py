@@ -2,14 +2,14 @@ import azure.functions as func
 from azure.storage.blob import BlobServiceClient, BlobProperties
 from azure.identity import DefaultAzureCredential
 import logging
+import os
 from PIL import Image
 from io import BytesIO
 
 
 # Retrieve the connection string from environment variables
-# CONNECTION_STRING = os.getenv('AzureWebJobsStorage')
-# Use Managed Identity for authentication
-credential = DefaultAzureCredential()
+CONNECTION_STRING = os.getenv('AzureWebJobsStorage')
+
 app = func.FunctionApp(http_auth_level=func.AuthLevel.ANONYMOUS)
 
 CONTAINER_NAME = 'image-files'
@@ -44,15 +44,9 @@ def upload_image(req: func.HttpRequest) -> func.HttpResponse:
 
         # Generate dynamic blob name
         blob_name = f"{req.files['file'].filename}"
-        
-        # Upload compressed image to Blob Storage
-        # output_blob.set(compressed_image)
 
         # Upload compressed image to Blob Storage using connection string
-        # blob_service_client = BlobServiceClient.from_connection_string(CONNECTION_STRING)
-
-        # Initialize BlobServiceClient with Managed Identity
-        blob_service_client = BlobServiceClient(account_url=f"https://imagestore9.blob.core.windows.net", credential=credential)
+        blob_service_client = BlobServiceClient.from_connection_string(CONNECTION_STRING)
 
         blob_client = blob_service_client.get_blob_client(container=CONTAINER_NAME, blob=blob_name)
         blob_client.upload_blob(compressed_image, overwrite=True)
@@ -69,11 +63,9 @@ def upload_image(req: func.HttpRequest) -> func.HttpResponse:
 def get_image(req: func.HttpRequest) -> func.HttpResponse:
     try:
         image_name = req.route_params.get('image')
-        # Initialize BlobServiceClient using connection string
-        # blob_service_client = BlobServiceClient.from_connection_string(CONNECTION_STRING)
 
-        # Initialize BlobServiceClient with Managed Identity
-        blob_service_client = BlobServiceClient(account_url=f"https://imagestore9.blob.core.windows.net", credential=credential)
+        # Initialize BlobServiceClient using connection string
+        blob_service_client = BlobServiceClient.from_connection_string(CONNECTION_STRING)
 
         blob_client = blob_service_client.get_blob_client(container=CONTAINER_NAME, blob=image_name)
         
@@ -107,8 +99,8 @@ def compress_large_image(blob: func.InputStream, name: str):
             # Compress image further
             compressed_image = compress_image(image_data, quality=70)
 
-            # Initialize BlobServiceClient with Managed Identity
-            blob_service_client = BlobServiceClient(account_url=f"https://imagestore9.blob.core.windows.net", credential=credential)
+            # Initialize BlobServiceClient using connection string
+            blob_service_client = BlobServiceClient.from_connection_string(CONNECTION_STRING)
 
             # Get Blob Client to upload the compressed image
             blob_client = blob_service_client.get_blob_client(container=CONTAINER_NAME, blob=name)
