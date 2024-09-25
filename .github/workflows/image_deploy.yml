@@ -53,4 +53,4 @@ jobs:
       - name: Deploy to Azure Function App
         run: |
           source venv/bin/activate
-          func azure functionapp publish image11 --python
+          func azure functionapp publish imageapp --python
