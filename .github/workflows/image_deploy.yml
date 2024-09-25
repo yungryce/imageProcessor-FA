@@ -54,3 +54,4 @@ jobs:
         run: |
           source venv/bin/activate
           func azure functionapp publish imageapp --python
+          
